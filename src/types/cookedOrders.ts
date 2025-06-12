@@ -22,6 +22,8 @@ export interface cookedOrders_cookedOrders_customer {
 export interface cookedOrders_cookedOrders_restaurant {
   __typename: "Restaurant";
   name: string;
+  lat: number;  // <== adicione isso
+  lng: number;  // <== e isso
 }
 
 export interface cookedOrders_cookedOrders {

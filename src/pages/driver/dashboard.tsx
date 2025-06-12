@@ -1,31 +1,18 @@
-import ReactMapboxGl, {Layer, Feature} from 'react-mapbox-gl';
-import {useEffect, useState} from 'react';
-import {gql, useMutation, useSubscription} from '@apollo/client';
-import {cookedOrders} from '../../types/cookedOrders';
-import {takeOrder, takeOrderVariables} from '../../types/takeOrder';
+import Map, { Marker, NavigationControl } from 'react-map-gl';
+import { gql, useMutation, useSubscription } from '@apollo/client';
+import 'mapbox-gl/dist/mapbox-gl.css';
 
-interface Coords {
-  lat: number;
-  lng: number;
-}
+import { ORDERS_FRAGMENT } from '../../fragments';
+import { cookedOrders } from '../../types/cookedOrders';
+import { takeOrder, takeOrderVariables } from '../../types/takeOrder';
 
-const COOCKED_ORDERS_SUBSCRIPTION = gql`
+export const COOKED_ORDERS_SUBSCRIPTION = gql`
   subscription cookedOrders {
     cookedOrders {
-      id
-      status
-      total
-      driver {
-        email
-      }
-      customer {
-        email
-      }
-      restaurant {
-        name
-      }
+      ...OrdersParts
     }
   }
+  ${ORDERS_FRAGMENT}
 `;
 
 const TAKE_ORDER_MUTATION = gql`
@@ -37,84 +24,71 @@ const TAKE_ORDER_MUTATION = gql`
   }
 `;
 
-const Map = ReactMapboxGl({
-  accessToken: process.env.REACT_APP_MAP_KEY || '',
-});
+const Dashboard = () => {
+  const mapboxToken = 'sk.eyJ1IjoiYWxla3NhbmRyYW5kYW8iLCJhIjoiY21ic282ejBwMDRmdzJrcG5vMzN0ajlkdCJ9.Lkq2jpwrDWXCLDCGWMj_kw';
+  const { data: cookedOrdersData } = useSubscription<cookedOrders>(
+    COOKED_ORDERS_SUBSCRIPTION
+  );
+  const [takeOrderMutation] = useMutation<takeOrder, takeOrderVariables>(
+    TAKE_ORDER_MUTATION
+  );
 
-function Dashboard() {
-  const [coords, setCoords] = useState<Coords>({lat: 0, lng: 0});
-  const {data} = useSubscription<cookedOrders>(COOCKED_ORDERS_SUBSCRIPTION);
-  const [takeOrderMutation] = useMutation<takeOrder, takeOrderVariables>(TAKE_ORDER_MUTATION, {
-    onCompleted,
-  });
-
-  useEffect(() => {
-    navigator.geolocation.watchPosition(onSuccess, onError, {
-      enableHighAccuracy: true,
-    });
-  }, []);
-
-  useEffect(() => {
-    if (data?.cookedOrders.id) {
-      // agregar la direccion del conductor
-    }
-  }, [data]);
-
-  function onCompleted() {
-    // navigate to order
-  }
-
-  function onSuccess({coords}: GeolocationPosition) {
-    setCoords({lat: coords.latitude, lng: coords.longitude});
-  }
-
-  function onError(error: GeolocationPositionError) {
-    console.log(error);
-  }
-
-  function sendOrder() {
-    takeOrderMutation({
-      variables: {
-        input: {
-          id: Number(data?.cookedOrders.id),
+  const onClickAccept = () => {
+    if (cookedOrdersData?.cookedOrders?.id) {
+      takeOrderMutation({
+        variables: {
+          input: {
+            id: cookedOrdersData.cookedOrders.id,
+          },
         },
-      },
-    });
-  }
+      });
+    }
+  };
+
+  const order = cookedOrdersData?.cookedOrders;
 
   return (
     <div>
-      <div>
-        <Map
-          style='mapbox://styles/mapbox/streets-v9'
-          center={[coords.lng, coords.lat]}
-          zoom={[15]}
-          containerStyle={{
-            height: '40vh',
-            width: '100vw',
-          }}>
-          <Layer
-            type='circle'
-            id='marker'
-            paint={{
-              'circle-stroke-width': 0,
-              'circle-radius': 10,
-              'circle-blur': 0.15,
-              'circle-color': '#abdbe3',
-            }}>
-            <Feature coordinates={[coords.lng, coords.lat]} />
-          </Layer>
-        </Map>
-        ;
-      </div>
-      {data?.cookedOrders && (
+      <h1 className="text-2xl font-bold mb-4">Novo pedido disponível</h1>
+      {order ? (
         <>
-          <h1>{data.cookedOrders.status}</h1>
-          <button onClick={sendOrder}>Entregar pedido</button>
+          <div className="mb-4">
+            <p><strong>Pedido ID:</strong> {order.id}</p>
+            <p><strong>Restaurante:</strong> {order.restaurant?.name}</p>
+            <button
+              onClick={onClickAccept}
+              className="mt-2 px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+            >
+              Aceitar pedido
+            </button>
+          </div>
+
+          <div style={{ height: '50vh', width: '100%' }}>
+            {mapboxToken && order.restaurant?.lat && order.restaurant?.lng && (
+              <Map
+                mapboxAccessToken={mapboxToken}
+                initialViewState={{
+                  longitude: order.restaurant.lng,
+                  latitude: order.restaurant.lat,
+                  zoom: 14,
+                }}
+                mapStyle="mapbox://styles/mapbox/streets-v11"
+                style={{ width: '100%', height: '100%' }}
+              >
+                <NavigationControl position="top-left" />
+                <Marker
+                  longitude={order.restaurant.lng}
+                  latitude={order.restaurant.lat}
+                />
+              </Map>
+            )}
+          </div>
         </>
+      ) : (
+        <p>Nenhum pedido pronto no momento.</p>
       )}
     </div>
   );
-}
+};
 
 export default Dashboard;

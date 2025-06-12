@@ -1,7 +1,7 @@
 import {Link} from 'react-router-dom';
 import {useMutation} from '@apollo/client';
 import {useForm} from 'react-hook-form';
-import {loginMutation, loginMutationVariables} from '../types/loginMutation';
+import {loginMutation, loginMutationVariables} from '../types/LoginMutation';
 import InputError from '../components/input-error';
 import Button from '../components/button';
 import {emailRegex} from '../utils/validators';
