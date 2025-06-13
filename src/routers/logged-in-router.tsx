@@ -1,9 +1,12 @@
+import { useNavigate } from 'react-router-dom';
 import {Link, useRoutes} from 'react-router-dom';
 import Spinner from '../components/spinner';
 import {useProfile} from '../hooks/use-profile';
 import Error from '../pages/error';
 import {routes} from './routes';
 import logo from '../assets/img/logo.png';
+import { authToken, isLoggedInVar } from '../apollo'; // ajuste o caminho conforme necessário
+
 
 const navLinks = [
   {
@@ -36,6 +39,15 @@ const navLinks = [
 function LoggedInRouter() {
   const {data, loading, error} = useProfile();
   const router = useRoutes(routes(data?.me?.role));
+
+  const navigate = useNavigate();
+  const logout = () => {
+    localStorage.removeItem('token');
+    authToken(null);
+    isLoggedInVar(false);
+    navigate('/'); // redireciona internamente
+  };
+  
 
   if (!!error) {
     return <Error />;
@@ -94,10 +106,11 @@ function LoggedInRouter() {
           </div>
         </div>
 
-        <button className='flex justify-center rounded-md bg-gray-100 py-3 hover:bg-gray-200'>
-          <span className='material-icons-outlined mr-3'>logout</span>
-          Cerrar sesión
-        </button>
+        <button onClick={logout} className='flex justify-center rounded-md bg-gray-100 py-3 hover:bg-gray-200'>
+  <span className='material-icons-outlined mr-3'>logout</span>
+  Cerrar sesión
+</button>
+
       </div>
       <div className='main'>
         <header className='px-4'>
